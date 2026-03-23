@@ -23,7 +23,7 @@ jobs:
 
       - name: Rename exe
         run: |
-          mv target/release/ama-connect.exe target/release/AMA-Connect-Setup.exe
+          mv target/release/amaconnect.exe target/release/AMA-Connect-Setup.exe
 
       - name: Upload Windows
         uses: actions/upload-artifact@v4
@@ -74,11 +74,20 @@ jobs:
         with:
           toolchain: '1.75'
 
+      - name: Setup VCPKG stub
+        run: |
+          mkdir -p /tmp/vcpkg
+          echo '{}' > /tmp/vcpkg/vcpkg.json
+
       - name: Build Linux
         run: cargo build --release
+        env:
+          NO_PKG_CONFIG_libyuv: 1
+          VCPKG_ROOT: /tmp/vcpkg
+          PKG_CONFIG_PATH: /usr/local/lib/pkgconfig:/usr/lib/pkgconfig
 
       - name: Upload Linux
         uses: actions/upload-artifact@v4
         with:
           name: AMA-Connect-Linux
-          path: target/release/ama-connect
+          path: target/release/amaconnect
