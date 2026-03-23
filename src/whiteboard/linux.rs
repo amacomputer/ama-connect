@@ -213,7 +213,7 @@ impl ApplicationHandler<(String, CustomEvent)> for WhiteboardApplication {
         };
 
         let window_attributes = Window::default_attributes()
-            .with_title("AMA Connect whiteboard")
+            .with_title("RustDesk whiteboard")
             .with_inner_size(PhysicalSize::new(w, h))
             .with_position(PhysicalPosition::new(x, y))
             .with_decorations(false)
