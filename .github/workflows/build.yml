@@ -55,7 +55,8 @@ jobs:
             libunwind-dev \
             libyuv-dev \
             nasm \
-            cmake
+            cmake \
+            libopus-dev
           sudo apt-get install -y libpam0g-dev
           find /usr -name "pam_appl.h" 2>/dev/null || echo "PAM header NOT found"
 
