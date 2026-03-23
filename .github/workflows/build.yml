@@ -39,6 +39,37 @@ jobs:
           name: AMA-Connect-Windows
           path: target/release/ama-connect.exe
 
+  build-flutter-windows:
+    runs-on: windows-2019
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.6'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.75'
+
+      - name: Flutter pub get
+        working-directory: flutter
+        run: flutter pub get
+
+      - name: Build Flutter Windows
+        working-directory: flutter
+        run: flutter build windows --release
+
+      - name: Upload Flutter Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: AMA-Connect-Flutter-Windows
+          path: flutter/build/windows/x64/runner/Release/
+
   build-linux:
     runs-on: ubuntu-22.04
     steps:
