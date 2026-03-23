@@ -6,6 +6,39 @@ on:
       - 'v*'
 
 jobs:
+  build-windows:
+    runs-on: windows-2019
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.75'
+          components: rustfmt
+
+      - name: Setup VCPKG
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+          C:\vcpkg\bootstrap-vcpkg.bat
+          C:\vcpkg\vcpkg install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static aom:x64-windows-static
+
+      - name: Build Windows
+        run: cargo build --release
+        env:
+          VCPKG_ROOT: C:\vcpkg
+
+      - name: List build output
+        run: dir target\release\
+
+      - name: Upload Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: AMA-Connect-Windows
+          path: target/release/ama-connect.exe
+
   build-linux:
     runs-on: ubuntu-22.04
     steps:
@@ -73,9 +106,6 @@ jobs:
         env:
           VCPKG_ROOT: /tmp/vcpkg
           PKG_CONFIG_PATH: /usr/local/lib/pkgconfig:/usr/lib/pkgconfig
-
-      - name: List build output
-        run: ls -la target/release/ | grep -v deps   
 
       - name: Upload Linux
         uses: actions/upload-artifact@v4
