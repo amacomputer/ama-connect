@@ -31,6 +31,8 @@ import 'models/platform_model.dart';
 
 import 'package:flutter_hbb/plugin/handlers.dart'
     if (dart.library.html) 'package:flutter_hbb/web/plugin/handlers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'login_page.dart';    
 
 /// Basic window and launch properties.
 int? kWindowId;
@@ -143,9 +145,23 @@ void runMainApp(bool startService) async {
     bind.pluginSyncUi(syncTo: kAppTypeMain);
     bind.pluginListReload();
   }
-  await Future.wait([gFFI.abModel.loadCache(), gFFI.groupModel.loadCache()]);
+ await Future.wait([gFFI.abModel.loadCache(), gFFI.groupModel.loadCache()]);
   gFFI.userModel.refreshCurrentUser();
-  runApp(App());
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('ama_token');
+  if (token == null || token.isEmpty) {
+    runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'AMA Connect',
+      home: LoginPage(
+        onLoginSuccess: () async {
+          runApp(App());
+        },
+      ),
+    ));
+  } else {
+    runApp(App());
+  }
 
   bool? alwaysOnTop;
   if (isDesktop) {
