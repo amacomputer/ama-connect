@@ -53,12 +53,21 @@ jobs:
             libgstreamer1.0-dev \
             libgstreamer-plugins-base1.0-dev \
             libunwind-dev \
-            libyuv-dev \
+            libopus-dev \
             nasm \
             cmake \
-            libopus-dev
+            git
           sudo apt-get install -y libpam0g-dev
-          find /usr -name "pam_appl.h" 2>/dev/null || echo "PAM header NOT found"
+
+      - name: Build and install libyuv
+        run: |
+          git clone https://chromium.googlesource.com/libyuv/libyuv
+          cd libyuv
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
