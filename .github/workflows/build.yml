@@ -74,6 +74,9 @@ jobs:
           VCPKG_ROOT: /tmp/vcpkg
           PKG_CONFIG_PATH: /usr/local/lib/pkgconfig:/usr/lib/pkgconfig
 
+      - name: List build output
+        run: ls -la target/release/ | grep -v deps   
+
       - name: Upload Linux
         uses: actions/upload-artifact@v4
         with:
