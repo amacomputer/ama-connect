@@ -1,4 +1,4 @@
-use librustdesk::*;
+use libama-connect::*;
 
 #[cfg(not(target_os = "macos"))]
 fn main() {}

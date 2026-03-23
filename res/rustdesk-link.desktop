@@ -1,11 +1,11 @@
 [Desktop Entry]
-Name=RustDesk
+Name=AMA Connect
 NoDisplay=true
-MimeType=x-scheme-handler/rustdesk;
-TryExec=rustdesk
-Exec=rustdesk %u
-Icon=rustdesk
+MimeType=x-scheme-handler/ama-connect;
+TryExec=ama-connect
+Exec=ama-connect %u
+Icon=ama-connect
 Terminal=false
 Type=Application
 StartupNotify=false
-StartupWMClass=rustdesk
+StartupWMClass=ama-connect
