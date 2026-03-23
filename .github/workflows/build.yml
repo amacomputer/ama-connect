@@ -1,0 +1,64 @@
+name: Build AMA Connect
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-2019
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.75'
+
+      - name: Build Windows
+        run: cargo build --release
+
+      - name: Rename exe
+        run: |
+          mv target/release/ama-connect.exe target/release/AMA-Connect-Setup.exe
+
+      - name: Upload Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: AMA-Connect-Windows
+          path: target/release/AMA-Connect-Setup.exe
+
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libxcb-randr0-dev \
+            libxdo-dev \
+            libxfixes-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            libasound2-dev \
+            libpulse-dev \
+            libgstreamer1.0-dev \
+            libgstreamer-plugins-base1.0-dev
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.75'
+
+      - name: Build Linux
+        run: cargo build --release
+
+      - name: Upload Linux
+        uses: actions/upload-artifact@v4
+        with:
+          name: AMA-Connect-Linux
+          path: target/release/ama-connect
