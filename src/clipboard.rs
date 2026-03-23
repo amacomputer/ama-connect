@@ -283,7 +283,7 @@ impl ClipboardContext {
         // If there're multiple threads or processes trying to access the clipboard at the same time,
         // the previous clipboard owner will fail to access the clipboard.
         // `GetLastError()` will return `ERROR_CLIPBOARD_NOT_OPEN` (OSError(1418): Thread does not have a clipboard open) at this time.
-        // See https://github.com/ama-connect-org/arboard/blob/747ab2d9b40a5c9c5102051cf3b0bb38b4845e60/src/platform/windows.rs#L34
+        // See https://github.com/rustdesk-org/arboard/blob/747ab2d9b40a5c9c5102051cf3b0bb38b4845e60/src/platform/windows.rs#L34
         //
         // This is a common case on Windows, so we retry here.
         // Related issues:
@@ -749,7 +749,7 @@ pub fn get_clipboards_msg(client: bool) -> Option<Message> {
 
 // We need this mod to notify multiple subscribers when the clipboard changes.
 // Because only one clipboard master(listener) can trigger the clipboard change event multiple listeners are created on Linux(x11).
-// https://github.com/ama-connect-org/clipboard-master/blob/4fb62e5b62fb6350d82b571ec7ba94b3cd466695/src/master/x11.rs#L226
+// https://github.com/rustdesk-org/clipboard-master/blob/4fb62e5b62fb6350d82b571ec7ba94b3cd466695/src/master/x11.rs#L226
 #[cfg(not(target_os = "android"))]
 pub mod clipboard_listener {
     use clipboard_master::{CallbackResult, ClipboardHandler, Master, Shutdown};

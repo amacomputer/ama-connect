@@ -408,7 +408,7 @@ def build_flutter_dmg(version, features):
             f'MACOSX_DEPLOYMENT_TARGET=10.14 cargo build --features {features} --release')
     # copy dylib
     system2(
-        "cp target/release/liblibama-connect.dylib target/release/libama-connect.dylib")
+        "cp target/release/liblibrustdesk.dylib target/release/librustdesk.dylib")
     os.chdir('flutter')
     system2('flutter build macos --release')
     system2('cp -rf ../target/release/service ./build/macos/Build/Products/Release/AMA Connect.app/Contents/MacOS/')
@@ -426,7 +426,7 @@ def build_flutter_arch_manjaro(version, features):
     ffi_bindgen_function_refactor()
     os.chdir('flutter')
     system2('flutter build linux --release')
-    system2(f'strip {flutter_build_dir}/lib/libama-connect.so')
+    system2(f'strip {flutter_build_dir}/lib/librustdesk.so')
     os.chdir('../res')
     system2('HBB=`pwd`/.. FLUTTER=1 makepkg -f')
 
@@ -434,7 +434,7 @@ def build_flutter_arch_manjaro(version, features):
 def build_flutter_windows(version, features, skip_portable_pack):
     if not skip_cargo:
         system2(f'cargo build --features {features} --lib --release')
-        if not os.path.exists("target/release/libama-connect.dll"):
+        if not os.path.exists("target/release/librustdesk.dll"):
             print("cargo build failed, please check rust source code.")
             exit(-1)
     os.chdir('flutter')
@@ -450,10 +450,10 @@ def build_flutter_windows(version, features, skip_portable_pack):
         f'python3 ./generate.py -f ../../{flutter_build_dir_2} -o . -e ../../{flutter_build_dir_2}/ama-connect.exe')
     os.chdir('../..')
     if os.path.exists('./ama-connect_portable.exe'):
-        os.replace('./target/release/ama-connect-portable-packer.exe',
+        os.replace('./target/release/rustdesk-portable-packer.exe',
                    './ama-connect_portable.exe')
     else:
-        os.rename('./target/release/ama-connect-portable-packer.exe',
+        os.rename('./target/release/rustdesk-portable-packer.exe',
                   './ama-connect_portable.exe')
     print(
         f'output location: {os.path.abspath(os.curdir)}/ama-connect_portable.exe')

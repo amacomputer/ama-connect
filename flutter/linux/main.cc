@@ -1,16 +1,16 @@
 #include <dlfcn.h>
 #include "my_application.h"
 
-#define RUSTDESK_LIB_PATH "libama-connect.so"
+#define RUSTDESK_LIB_PATH "librustdesk.so"
 typedef bool (*AMA ConnectCoreMain)();
 bool gIsConnectionManager = false;
 
 void print_help_install_pkg(const char* so);
 
 bool flutter_ama-connect_core_main() {
-   void* libama-connect = dlopen(RUSTDESK_LIB_PATH, RTLD_LAZY);
-   if (!libama-connect) {
-      fprintf(stderr,"Failed to load \"libama-connect.so\"\n");
+   void* librustdesk = dlopen(RUSTDESK_LIB_PATH, RTLD_LAZY);
+   if (!librustdesk) {
+      fprintf(stderr,"Failed to load \"librustdesk.so\"\n");
       char* error;
       if ((error = dlerror()) != nullptr) {
         fprintf(stderr, "%s\n", error);
@@ -24,7 +24,7 @@ bool flutter_ama-connect_core_main() {
       }
      return false;
    }
-   auto core_main = (AMA ConnectCoreMain) dlsym(libama-connect,"ama-connect_core_main");
+   auto core_main = (AMA ConnectCoreMain) dlsym(librustdesk,"ama-connect_core_main");
    char* error;
    if ((error = dlerror()) != nullptr) {
        fprintf(stderr, "Program entry \"ama-connect_core_main\" is not found: %s\n", error);

@@ -22,10 +22,10 @@ const wchar_t* getWindowClassName();
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command)
 {
-  HINSTANCE hInstance = LoadLibraryA("libama-connect.dll");
+  HINSTANCE hInstance = LoadLibraryA("librustdesk.dll");
   if (!hInstance)
   {
-    std::cout << "Failed to load libama-connect.dll." << std::endl;
+    std::cout << "Failed to load librustdesk.dll." << std::endl;
     return EXIT_FAILURE;
   }
   FUNC_RUSTDESK_CORE_MAIN ama-connect_core_main =

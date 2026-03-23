@@ -6,7 +6,7 @@
         <string>com.carriez.AMA Connect_service</string>
 
 	<key>AssociatedBundleIdentifiers</key>
-	<string>com.carriez.ama-connect</string>
+	<string>com.carriez.amaconnect</string>
     
         <key>KeepAlive</key>
         <true/>
