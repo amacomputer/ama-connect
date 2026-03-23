@@ -1,11 +1,11 @@
 [package]
-name = "ama-connect"
+name = "amaconnect"
 version = "1.0.0"
 authors = ["AMA Connect <contact@amaconnect.dz>"]
 edition = "2021"
 build= "build.rs"
 description = "AMA Connect RDC - Prise en main a distance"
-default-run = "ama-connect"
+default-run = "amaconnect"
 rust-version = "1.75"
 
 [lib]
