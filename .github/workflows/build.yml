@@ -1,0 +1,81 @@
+name: Build AMA Connect
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libxcb-randr0-dev \
+            libxdo-dev \
+            libxfixes-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            libasound2-dev \
+            libpulse-dev \
+            libgstreamer1.0-dev \
+            libgstreamer-plugins-base1.0-dev \
+            libunwind-dev \
+            libopus-dev \
+            libvpx-dev \
+            libaom-dev \
+            libpam0g-dev \
+            nasm \
+            cmake \
+            git \
+            clang \
+            libclang-dev
+
+      - name: Build and install libyuv
+        run: |
+          git clone https://chromium.googlesource.com/libyuv/libyuv
+          cd libyuv
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+
+      - name: Setup VCPKG stub
+        run: |
+          mkdir -p /tmp/vcpkg/installed/x64-linux/lib
+          mkdir -p /tmp/vcpkg/installed/x64-linux/include
+          cp -r /usr/include/vpx /tmp/vcpkg/installed/x64-linux/include/ || true
+          cp -r /usr/include/aom /tmp/vcpkg/installed/x64-linux/include/ || true
+          cp -r /usr/include/opus /tmp/vcpkg/installed/x64-linux/include/ || true
+          find /usr/lib/x86_64-linux-gnu -name "libvpx*" -exec cp {} /tmp/vcpkg/installed/x64-linux/lib/ \; || true
+          find /usr/lib/x86_64-linux-gnu -name "libaom*" -exec cp {} /tmp/vcpkg/installed/x64-linux/lib/ \; || true
+          find /usr/lib/x86_64-linux-gnu -name "libopus*" -exec cp {} /tmp/vcpkg/installed/x64-linux/lib/ \; || true
+          find /usr/local/lib -name "libyuv*" -exec cp {} /tmp/vcpkg/installed/x64-linux/lib/ \; || true
+          cp -r /usr/local/include/libyuv* /tmp/vcpkg/installed/x64-linux/include/ || true
+          cp -r /usr/local/include/yuv* /tmp/vcpkg/installed/x64-linux/include/ || true
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.75'
+          components: rustfmt
+
+      - name: Build Linux
+        run: cargo build --release
+        env:
+          VCPKG_ROOT: /tmp/vcpkg
+          PKG_CONFIG_PATH: /usr/local/lib/pkgconfig:/usr/lib/pkgconfig
+
+      - name: Upload Linux
+        uses: actions/upload-artifact@v4
+        with:
+          name: AMA-Connect-Linux
+          path: target/release/rustdesk
