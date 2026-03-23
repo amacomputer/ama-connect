@@ -76,8 +76,17 @@ jobs:
 
       - name: Setup VCPKG stub
         run: |
-          mkdir -p /tmp/vcpkg
-          echo '{}' > /tmp/vcpkg/vcpkg.json
+          sudo apt-get install -y libvpx-dev
+          mkdir -p /tmp/vcpkg/installed/x64-linux/lib
+          mkdir -p /tmp/vcpkg/installed/x64-linux/include
+          cp -r /usr/include/vpx /tmp/vcpkg/installed/x64-linux/include/ || true
+          find /usr/lib -name "libvpx*" -exec cp {} /tmp/vcpkg/installed/x64-linux/lib/ \; || true
+          find /usr/lib/x86_64-linux-gnu -name "libvpx*" -exec cp {} /tmp/vcpkg/installed/x64-linux/lib/ \; || true
+          cp -r /usr/local/include/libyuv* /tmp/vcpkg/installed/x64-linux/include/ || true
+          cp -r /usr/local/include/yuv* /tmp/vcpkg/installed/x64-linux/include/ || true
+          find /usr/local/lib -name "libyuv*" -exec cp {} /tmp/vcpkg/installed/x64-linux/lib/ \; || true
+          ls /tmp/vcpkg/installed/x64-linux/lib/
+          ls /tmp/vcpkg/installed/x64-linux/include/
 
       - name: Build Linux
         run: cargo build --release
