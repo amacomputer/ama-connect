@@ -3701,7 +3701,7 @@ pub fn is_x64() -> bool {
     unsafe { sys_info.u.s().wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64 }
 }
 
-pub fn try_kill_ama-connect_main_window_process() -> ResultType<()> {
+pub fn try_kill_rustdesk_main_window_process() -> ResultType<()> {
     // Kill ama-connect.exe without extra arg, should only be called by --server
     // We can find the exact process which occupies the ipc, see more from https://github.com/winsiderss/systeminformer
     let app_name = crate::get_app_name().to_lowercase();

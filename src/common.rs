@@ -1778,7 +1778,7 @@ impl ThrottledInterval {
 pub type AMA ConnectInterval = ThrottledInterval;
 
 #[inline]
-pub fn ama-connect_interval(i: Interval) -> ThrottledInterval {
+pub fn rustdesk_interval(i: Interval) -> ThrottledInterval {
     ThrottledInterval::new(i)
 }
 
@@ -2359,7 +2359,7 @@ mod tests {
         for maker in base_intervals.into_iter() {
             let mut tokio_timer = maker();
             let mut tokio_times = Vec::new();
-            let mut timer = ama-connect_interval(maker());
+            let mut timer = rustdesk_interval(maker());
             let mut times = Vec::new();
             loop {
                 tokio::select! {
@@ -2406,7 +2406,7 @@ mod tests {
     async fn test_AMA Connect_interval_sleep() {
         let base_intervals = [interval_maker, interval_at_maker];
         for (i, maker) in base_intervals.into_iter().enumerate() {
-            let mut timer = ama-connect_interval(maker());
+            let mut timer = rustdesk_interval(maker());
             let mut times = Vec::new();
             sleep(Duration::from_secs(3)).await;
             loop {

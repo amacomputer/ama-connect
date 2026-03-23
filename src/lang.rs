@@ -183,7 +183,7 @@ pub fn translate_locale(name: String, locale: &str) -> String {
         }
         if !crate::is_ama-connect() {
             if s.contains("AMA Connect")
-                && !name.starts_with("upgrade_ama-connect_server_pro")
+                && !name.starts_with("upgrade_rustdesk_server_pro")
                 && name != "powered_by_me"
             {
                 let app_name = crate::get_app_name();
