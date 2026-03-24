@@ -140,7 +140,7 @@ jobs:
           export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125
           export NDK_SYSROOT=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot
           export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=$NDK_SYSROOT -target aarch64-linux-android21"
-          cargo ndk -t arm64-v8a -o flutter/android/app/src/main/jniLibs build --release
+          cargo ndk -t arm64-v8a -o flutter/android/app/src/main/jniLibs build --release --features flutter
         env:
           VCPKG_ROOT: /tmp/vcpkg
 
@@ -226,4 +226,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AMA-Connect-Linux
-          path: target/release/ama-connect
+          path: target/release/ama-connect  
