@@ -71,89 +71,6 @@ jobs:
           name: AMA-Connect-Flutter-Windows
           path: flutter/build/windows/x64/runner/Release/
 
-  build-android:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install NDK
-        run: |
-          echo "y" | sdkmanager "ndk;26.1.10909125"
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: '1.75'
-          targets: aarch64-linux-android
-          components: rustfmt
-
-      - name: Install cargo-ndk
-        run: cargo install cargo-ndk --version 3.5.4 --locked
-
-      - name: Install Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.24.0'
-
-      - name: Flutter pub get
-        working-directory: flutter
-        run: flutter pub get
-
-      - name: Build libyuv from source
-        run: |
-          git clone https://chromium.googlesource.com/libyuv/libyuv /tmp/libyuv
-          cd /tmp/libyuv
-          mkdir build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ..
-          make -j$(nproc)
-          sudo make install
-          sudo ldconfig
-
-      - name: Setup VCPKG stub Android
-        run: |
-          sudo apt-get install -y libopus-dev libvpx-dev libaom-dev
-          mkdir -p /tmp/vcpkg/installed/arm64-android/lib
-          mkdir -p /tmp/vcpkg/installed/arm64-android/include
-          cp -r /usr/include/opus /tmp/vcpkg/installed/arm64-android/include/ || true
-          cp -r /usr/include/vpx /tmp/vcpkg/installed/arm64-android/include/ || true
-          cp -r /usr/include/aom /tmp/vcpkg/installed/arm64-android/include/ || true
-          find /usr/lib/x86_64-linux-gnu -name "libopus*" -exec cp {} /tmp/vcpkg/installed/arm64-android/lib/ \; || true
-          find /usr/lib/x86_64-linux-gnu -name "libvpx*" -exec cp {} /tmp/vcpkg/installed/arm64-android/lib/ \; || true
-          find /usr/lib/x86_64-linux-gnu -name "libaom*" -exec cp {} /tmp/vcpkg/installed/arm64-android/lib/ \; || true
-          cp -r /usr/local/include/libyuv* /tmp/vcpkg/installed/arm64-android/include/ || true
-          cp -r /usr/local/include/yuv* /tmp/vcpkg/installed/arm64-android/include/ || true
-          find /usr/local/lib -name "libyuv*" -exec cp {} /tmp/vcpkg/installed/arm64-android/lib/ \; || true
-
-      - name: Build Rust Android lib
-        run: |
-          export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125
-          export NDK_SYSROOT=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot
-          export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=$NDK_SYSROOT -target aarch64-linux-android21"
-          cargo ndk -t arm64-v8a -o flutter/android/app/src/main/jniLibs build --release --features flutter
-        env:
-          VCPKG_ROOT: /tmp/vcpkg
-
-      - name: Build APK
-        working-directory: flutter
-        run: flutter build apk --release --target-platform android-arm64
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: AMA-Connect-Android
-          path: flutter/build/app/outputs/flutter-apk/app-release.apk
-
   build-linux:
     runs-on: ubuntu-22.04
     steps:
@@ -226,4 +143,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AMA-Connect-Linux
-          path: target/release/ama-connect  
+          path: target/release/ama-connect
