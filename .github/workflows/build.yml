@@ -55,6 +55,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: '1.75'
+          components: rustfmt
 
       - name: Flutter pub get
         working-directory: flutter
@@ -95,6 +96,7 @@ jobs:
         with:
           toolchain: '1.75'
           targets: aarch64-linux-android
+          components: rustfmt
 
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --version 3.5.4 --locked
@@ -108,6 +110,16 @@ jobs:
         working-directory: flutter
         run: flutter pub get
 
+      - name: Build libyuv from source
+        run: |
+          git clone https://chromium.googlesource.com/libyuv/libyuv /tmp/libyuv
+          cd /tmp/libyuv
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+
       - name: Setup VCPKG stub Android
         run: |
           sudo apt-get install -y libopus-dev libvpx-dev libaom-dev
@@ -119,6 +131,9 @@ jobs:
           find /usr/lib/x86_64-linux-gnu -name "libopus*" -exec cp {} /tmp/vcpkg/installed/arm64-android/lib/ \; || true
           find /usr/lib/x86_64-linux-gnu -name "libvpx*" -exec cp {} /tmp/vcpkg/installed/arm64-android/lib/ \; || true
           find /usr/lib/x86_64-linux-gnu -name "libaom*" -exec cp {} /tmp/vcpkg/installed/arm64-android/lib/ \; || true
+          cp -r /usr/local/include/libyuv* /tmp/vcpkg/installed/arm64-android/include/ || true
+          cp -r /usr/local/include/yuv* /tmp/vcpkg/installed/arm64-android/include/ || true
+          find /usr/local/lib -name "libyuv*" -exec cp {} /tmp/vcpkg/installed/arm64-android/lib/ \; || true
 
       - name: Build Rust Android lib
         run: |
@@ -181,26 +196,24 @@ jobs:
           sudo make install
           sudo ldconfig
 
-      - name: Setup VCPKG stub Android
+      - name: Setup VCPKG stub
         run: |
-          sudo apt-get install -y libopus-dev libvpx-dev libaom-dev
-          mkdir -p /tmp/vcpkg/installed/arm64-android/lib
-          mkdir -p /tmp/vcpkg/installed/arm64-android/include
-          cp -r /usr/include/opus /tmp/vcpkg/installed/arm64-android/include/ || true
-          cp -r /usr/include/vpx /tmp/vcpkg/installed/arm64-android/include/ || true
-          cp -r /usr/include/aom /tmp/vcpkg/installed/arm64-android/include/ || true
-          find /usr/lib/x86_64-linux-gnu -name "libopus*" -exec cp {} /tmp/vcpkg/installed/arm64-android/lib/ \; || true
-          find /usr/lib/x86_64-linux-gnu -name "libvpx*" -exec cp {} /tmp/vcpkg/installed/arm64-android/lib/ \; || true
-          find /usr/lib/x86_64-linux-gnu -name "libaom*" -exec cp {} /tmp/vcpkg/installed/arm64-android/lib/ \; || true
-          git clone https://chromium.googlesource.com/libyuv/libyuv /tmp/libyuv
-          mkdir -p /tmp/vcpkg/installed/arm64-android/include/libyuv
-          cp -r /tmp/libyuv/include/libyuv* /tmp/vcpkg/installed/arm64-android/include/ || true
+          mkdir -p /tmp/vcpkg/installed/x64-linux/lib
+          mkdir -p /tmp/vcpkg/installed/x64-linux/include
+          cp -r /usr/include/vpx /tmp/vcpkg/installed/x64-linux/include/ || true
+          cp -r /usr/include/aom /tmp/vcpkg/installed/x64-linux/include/ || true
+          cp -r /usr/include/opus /tmp/vcpkg/installed/x64-linux/include/ || true
+          find /usr/lib/x86_64-linux-gnu -name "libvpx*" -exec cp {} /tmp/vcpkg/installed/x64-linux/lib/ \; || true
+          find /usr/lib/x86_64-linux-gnu -name "libaom*" -exec cp {} /tmp/vcpkg/installed/x64-linux/lib/ \; || true
+          find /usr/lib/x86_64-linux-gnu -name "libopus*" -exec cp {} /tmp/vcpkg/installed/x64-linux/lib/ \; || true
+          find /usr/local/lib -name "libyuv*" -exec cp {} /tmp/vcpkg/installed/x64-linux/lib/ \; || true
+          cp -r /usr/local/include/libyuv* /tmp/vcpkg/installed/x64-linux/include/ || true
+          cp -r /usr/local/include/yuv* /tmp/vcpkg/installed/x64-linux/include/ || true
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: '1.75'
-          targets: aarch64-linux-android
           components: rustfmt
 
       - name: Build Linux
