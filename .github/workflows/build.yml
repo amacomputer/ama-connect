@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-windows:
-    runs-on: windows-2019
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -19,16 +19,37 @@ jobs:
           toolchain: '1.75'
           components: rustfmt
 
-      - name: Setup VCPKG
+      # Cache pour Rust (Cargo)
+      - name: Cargo Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      # Gestion de VCPKG avec Cache intégré
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: ${{ github.workspace }}/vcpkg
+          vcpkgGitCommitId: 'master'
+          runVcpkgInstall: true
+          # On définit les packages ici
+          vcpkgJsonGlob: '**/vcpkg.json' 
+        
+      # Installation manuelle si vous n'avez pas de fichier vcpkg.json
+      - name: Install VCPKG dependencies
         run: |
-          git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
-          C:\vcpkg\bootstrap-vcpkg.bat
-          C:\vcpkg\vcpkg install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static aom:x64-windows-static
+          ./vcpkg/vcpkg install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static aom:x64-windows-static
 
       - name: Build Windows
         run: cargo build --release
         env:
-          VCPKG_ROOT: C:\vcpkg
+          VCPKG_ROOT: ${{ github.workspace }}/vcpkg
 
       - name: List build output
         run: dir target\release\
@@ -40,7 +61,7 @@ jobs:
           path: target/release/ama-connect.exe
 
   build-flutter-windows:
-    runs-on: windows-2019
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,6 +71,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.0'
+          cache: true # Active le cache Flutter automatiquement
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -78,40 +100,36 @@ jobs:
         with:
           submodules: recursive
 
+      # Cache pour Linux
+      - name: Cargo Cache Linux
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libgtk-3-dev \
-            libxcb-randr0-dev \
-            libxdo-dev \
-            libxfixes-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            libasound2-dev \
-            libpulse-dev \
-            libgstreamer1.0-dev \
-            libgstreamer-plugins-base1.0-dev \
-            libunwind-dev \
-            libopus-dev \
-            libvpx-dev \
-            libaom-dev \
-            libpam0g-dev \
-            nasm \
-            cmake \
-            git \
-            clang \
-            libclang-dev
+            libgtk-3-dev libxcb-randr0-dev libxdo-dev libxfixes-dev \
+            libxcb-shape0-dev libxcb-xfixes0-dev libasound2-dev \
+            libpulse-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libunwind-dev libopus-dev libvpx-dev libaom-dev libpam0g-dev \
+            nasm cmake git clang libclang-dev
 
       - name: Build and install libyuv
         run: |
-          git clone https://chromium.googlesource.com/libyuv/libyuv
-          cd libyuv
-          mkdir build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ..
-          make -j$(nproc)
-          sudo make install
-          sudo ldconfig
+          if [ ! -f /usr/local/lib/libyuv.a ]; then
+            git clone https://chromium.googlesource.com/libyuv/libyuv
+            cd libyuv && mkdir build && cd build
+            cmake -DCMAKE_BUILD_TYPE=Release ..
+            make -j$(nproc)
+            sudo make install
+            sudo ldconfig
+          fi
 
       - name: Setup VCPKG stub
         run: |
@@ -125,7 +143,6 @@ jobs:
           find /usr/lib/x86_64-linux-gnu -name "libopus*" -exec cp {} /tmp/vcpkg/installed/x64-linux/lib/ \; || true
           find /usr/local/lib -name "libyuv*" -exec cp {} /tmp/vcpkg/installed/x64-linux/lib/ \; || true
           cp -r /usr/local/include/libyuv* /tmp/vcpkg/installed/x64-linux/include/ || true
-          cp -r /usr/local/include/yuv* /tmp/vcpkg/installed/x64-linux/include/ || true
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
