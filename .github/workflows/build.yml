@@ -19,37 +19,40 @@ jobs:
           toolchain: '1.75'
           components: rustfmt
 
-      # Cache pour Rust (Cargo)
-      - name: Cargo Cache
+      # Cache pour les dépendances Cargo (Rust)
+      - name: Cache Cargo
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      # Gestion de VCPKG avec Cache intégré
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
+      # Cache pour VCPKG (évite de recompiler libvpx, opus, etc.)
+      - name: Cache VCPKG
+        uses: actions/cache@v4
+        id: cache-vcpkg
         with:
-          vcpkgDirectory: ${{ github.workspace }}/vcpkg
-          vcpkgGitCommitId: 'master'
-          runVcpkgInstall: true
-          # On définit les packages ici
-          vcpkgJsonGlob: '**/vcpkg.json' 
-        
-      # Installation manuelle si vous n'avez pas de fichier vcpkg.json
-      - name: Install VCPKG dependencies
+          path: C:/vcpkg
+          key: ${{ runner.os }}-vcpkg-libs-v1
+
+      - name: Setup VCPKG
+        shell: bash
         run: |
-          ./vcpkg/vcpkg install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static aom:x64-windows-static
+          if [ ! -d "C:/vcpkg" ]; then
+            git clone https://github.com/microsoft/vcpkg.git C:/vcpkg
+            ./C/vcpkg/bootstrap-vcpkg.bat
+          fi
+          # Installation des librairies en mode statique x64
+          ./C/vcpkg/vcpkg install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static aom:x64-windows-static
 
       - name: Build Windows
+        shell: bash
         run: cargo build --release
         env:
-          VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+          VCPKG_ROOT: 'C:/vcpkg'
+          VCPKGRS_DYNAMIC: '0' # Force le lien statique pour éviter les erreurs .dll
 
       - name: List build output
         run: dir target\release\
@@ -71,7 +74,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.0'
-          cache: true # Active le cache Flutter automatiquement
+          cache: true
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -100,15 +103,14 @@ jobs:
         with:
           submodules: recursive
 
-      # Cache pour Linux
-      - name: Cargo Cache Linux
+      - name: Cache Cargo Linux
         uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-linux-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install dependencies
         run: |
