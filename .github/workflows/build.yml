@@ -21,9 +21,9 @@ jobs:
 
       - name: Setup VCPKG
         run: |
-          git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+          git clone https://github.com/microsoft/vcpkg.git C:\vcpkg || true
           C:\vcpkg\bootstrap-vcpkg.bat
-          C:\vcpkg\vcpkg install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static aom:x64-windows-static
+          C:\vcpkg\vcpkg install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static aom:x64-windows-static --classic
 
       - name: Build Windows
         run: cargo build --release
