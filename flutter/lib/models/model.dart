@@ -965,7 +965,7 @@ class FfiModel with ChangeNotifier {
       // The actual wait may exceed 30s (e.g., 20s elapsed + 16s next retry = 36s), which is acceptable
       // since the controlled side reconnects quickly after account changes.
       // Uses time-based check instead of _reconnects count because user can manually retry.
-      // https://github.com/ama-connect/ama-connect/discussions/14048
+      // https://github.com/rustdesk/rustdesk/discussions/14048
       if (_offlineReconnectStartTime == null) {
         // First offline, record time and start retry
         _offlineReconnectStartTime = DateTime.now();
@@ -1644,7 +1644,7 @@ class FfiModel with ChangeNotifier {
     }
 
     if (updateData.isEmpty) {
-      _pi.platformAdditions.remove(kPlatformAdditionsAMA ConnectVirtualDisplays);
+      _pi.platformAdditions.remove(kPlatformAdditionsRustDeskVirtualDisplays);
       _pi.platformAdditions.remove(kPlatformAdditionsAmyuniVirtualDisplays);
     } else {
       try {
@@ -1653,9 +1653,9 @@ class FfiModel with ChangeNotifier {
           _pi.platformAdditions[key] = updateJson[key];
         }
         if (!updateJson
-            .containsKey(kPlatformAdditionsAMA ConnectVirtualDisplays)) {
+            .containsKey(kPlatformAdditionsRustDeskVirtualDisplays)) {
           _pi.platformAdditions
-              .remove(kPlatformAdditionsAMA ConnectVirtualDisplays);
+              .remove(kPlatformAdditionsRustDeskVirtualDisplays);
         }
         if (!updateJson.containsKey(kPlatformAdditionsAmyuniVirtualDisplays)) {
           _pi.platformAdditions.remove(kPlatformAdditionsAmyuniVirtualDisplays);
@@ -1736,7 +1736,7 @@ class FfiModel with ChangeNotifier {
 
   void setViewOnly(String id, bool value) {
     if (versionCmp(_pi.version, '1.2.0') < 0) return;
-    // tmp fix for https://github.com/ama-connect/ama-connect/pull/3706#issuecomment-1481242389
+    // tmp fix for https://github.com/rustdesk/rustdesk/pull/3706#issuecomment-1481242389
     // because below rx not used in mobile version, so not initialized, below code will cause crash
     // current our flutter code quality is fucking shit now. !!!!!!!!!!!!!!!!
     try {
@@ -4055,8 +4055,8 @@ class PeerInfo with ChangeNotifier {
   bool get isInstalled =>
       platform != kPeerPlatformWindows ||
       platformAdditions[kPlatformAdditionsIsInstalled] == true;
-  List<int> get AMA ConnectVirtualDisplays => List<int>.from(
-      platformAdditions[kPlatformAdditionsAMA ConnectVirtualDisplays] ?? []);
+  List<int> get RustDeskVirtualDisplays => List<int>.from(
+      platformAdditions[kPlatformAdditionsRustDeskVirtualDisplays] ?? []);
   int get amyuniVirtualDisplayCount =>
       platformAdditions[kPlatformAdditionsAmyuniVirtualDisplays] ?? 0;
 
@@ -4067,7 +4067,7 @@ class PeerInfo with ChangeNotifier {
   bool get cursorEmbedded => tryGetDisplay()?.cursorEmbedded ?? false;
 
   bool get isRustDeskIdd =>
-      platformAdditions[kPlatformAdditionsIddImpl] == 'ama-connect_idd';
+      platformAdditions[kPlatformAdditionsIddImpl] == 'rustdesk_idd';
   bool get isAmyuniIdd =>
       platformAdditions[kPlatformAdditionsIddImpl] == 'amyuni_idd';
 

@@ -35,7 +35,7 @@ class SettingsPage extends StatefulWidget implements PageShape {
   State<SettingsPage> createState() => _SettingsState();
 }
 
-const url = 'https://ama-connect.com/';
+const url = 'https://rustdesk.com/';
 
 enum KeepScreenOn {
   never,
@@ -529,7 +529,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
               title: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(translate('Keep AMA Connect background service')),
+                    Text(translate('Keep RustDesk background service')),
                     Text('* ${translate('Ignore Battery Optimizations')}',
                         style: Theme.of(context).textTheme.bodySmall),
                   ]),
@@ -952,7 +952,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                 title: Text(translate("Version: ") + version),
                 value: Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Text('ama-connect.com',
+                  child: Text('rustdesk.com',
                       style: TextStyle(
                         decoration: TextDecoration.underline,
                       )),
@@ -977,7 +977,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
             SettingsTile(
               title: Text(translate("Privacy Statement")),
               onPressed: (context) =>
-                  launchUrlString('https://ama-connect.com/privacy.html'),
+                  launchUrlString('https://rustdesk.com/privacy.html'),
               leading: Icon(Icons.privacy_tip),
             )
           ],
@@ -1085,17 +1085,17 @@ void showThemeSettings(OverlayDialogManager dialogManager) async {
 void showAbout(OverlayDialogManager dialogManager) {
   dialogManager.show((setState, close, context) {
     return CustomAlertDialog(
-      title: Text(translate('About AMA Connect')),
+      title: Text(translate('About RustDesk')),
       content: Wrap(direction: Axis.vertical, spacing: 12, children: [
         Text('Version: $version'),
         InkWell(
             onTap: () async {
-              const url = 'https://ama-connect.com/';
+              const url = 'https://rustdesk.com/';
               await launchUrl(Uri.parse(url));
             },
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text('ama-connect.com',
+              child: Text('rustdesk.com',
                   style: TextStyle(
                     decoration: TextDecoration.underline,
                   )),

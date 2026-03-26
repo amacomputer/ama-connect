@@ -52,10 +52,10 @@ class MultiWindowCallResult {
 /// Window Manager
 /// mainly use it in `Main Window`
 /// use it in sub window is not recommended
-class AMA ConnectMultiWindowManager {
-  AMA ConnectMultiWindowManager._();
+class RustDeskMultiWindowManager {
+  RustDeskMultiWindowManager._();
 
-  static final instance = AMA ConnectMultiWindowManager._();
+  static final instance = RustDeskMultiWindowManager._();
 
   final Set<int> _inactiveWindows = {};
   final Set<int> _activeWindows = {};
@@ -578,4 +578,4 @@ class AMA ConnectMultiWindowManager {
   }
 }
 
-final rustDeskWinManager = AMA ConnectMultiWindowManager.instance;
+final rustDeskWinManager = RustDeskMultiWindowManager.instance;

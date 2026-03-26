@@ -433,11 +433,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     if (!bind.isCustomClient() &&
         updateUrl.isNotEmpty &&
         !isCardClosed &&
-        bind.mainUriPrefixSync().contains('ama-connect')) {
+        bind.mainUriPrefixSync().contains('rustdesk')) {
       final isToUpdate = (isWindows || isMacOS) && bind.mainIsInstalled();
       String btnText = isToUpdate ? 'Update' : 'Download';
       GestureTapCallback onPressed = () async {
-        final Uri url = Uri.parse('https://ama-connect.com/download');
+        final Uri url = Uri.parse('https://rustdesk.com/download');
         await launchUrl(url);
       };
       if (isToUpdate) {
@@ -453,7 +453,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           closeButton: true,
           help: isToUpdate ? 'Changelog' : null,
           link: isToUpdate
-              ? 'https://github.com/ama-connect/ama-connect/releases/tag/${bind.mainGetNewVersion()}'
+              ? 'https://github.com/rustdesk/rustdesk/releases/tag/${bind.mainGetNewVersion()}'
               : null);
     }
     if (systemError.isNotEmpty) {
@@ -530,7 +530,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             marginTop: LinuxCards.isEmpty ? 20.0 : 5.0,
             help: 'Help',
             link:
-                'https://ama-connect.com/docs/en/client/linux/#permissions-issue',
+                'https://rustdesk.com/docs/en/client/linux/#permissions-issue',
             closeButton: true,
             closeOption: keyShowSelinuxHelpTip,
           ));
@@ -541,13 +541,13 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             "Warning", "wayland_experiment_tip", "", () async {},
             marginTop: LinuxCards.isEmpty ? 20.0 : 5.0,
             help: 'Help',
-            link: 'https://ama-connect.com/docs/en/client/linux/#x11-required'));
+            link: 'https://rustdesk.com/docs/en/client/linux/#x11-required'));
       } else if (bind.mainIsLoginWayland()) {
         LinuxCards.add(buildInstallCard("Warning",
             "Login screen using Wayland is not supported", "", () async {},
             marginTop: LinuxCards.isEmpty ? 20.0 : 5.0,
             help: 'Help',
-            link: 'https://ama-connect.com/docs/en/client/linux/#login-screen'));
+            link: 'https://rustdesk.com/docs/en/client/linux/#login-screen'));
       }
       if (LinuxCards.isNotEmpty) {
         return Column(

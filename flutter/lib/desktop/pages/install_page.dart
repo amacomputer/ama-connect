@@ -187,9 +187,9 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                           InkWell(
                             hoverColor: Colors.transparent,
                             onTap: () => launchUrlString(
-                                'https://ama-connect.com/privacy.html'),
+                                'https://rustdesk.com/privacy.html'),
                             child: Tooltip(
-                              message: 'https://ama-connect.com/privacy.html',
+                              message: 'https://rustdesk.com/privacy.html',
                               child: Row(children: [
                                 Icon(Icons.launch_outlined, size: 16)
                                     .marginOnly(right: 5),

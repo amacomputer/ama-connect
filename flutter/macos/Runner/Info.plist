@@ -26,10 +26,10 @@
 			<key>CFBundleURLIconFile</key>
 			<string></string>
 			<key>CFBundleURLName</key>
-			<string>com.carriez.ama-connect</string>
+			<string>com.carriez.rustdesk</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>ama-connect</string>
+				<string>rustdesk</string>
 			</array>
 		</dict>
 	</array>

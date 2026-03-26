@@ -43,7 +43,7 @@ bool FlutterWindow::OnCreate() {
 
   flutter::MethodChannel<> channel(
     flutter_controller_->engine()->messenger(),
-    "org.ama-connect.ama-connect/host",
+    "org.rustdesk.rustdesk/host",
     &flutter::StandardMethodCodec::GetInstance());
 
   channel.SetMethodCallHandler(
