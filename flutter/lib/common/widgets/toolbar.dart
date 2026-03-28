@@ -156,7 +156,7 @@ List<TTextMenu> toolbarControls(BuildContext context, String id, FFI ffi) {
         onPressed: () => ffi.cursorModel.reset()));
   }
 
-  // https://github.com/rustdesk/rustdesk/pull/9731
+  // https://github.com/AMA-Connect/AMA-Connect/pull/9731
   // Does not work for connection established by "accept".
   connectWithToken(
       {bool isFileTransfer = false,

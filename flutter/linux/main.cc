@@ -1,16 +1,16 @@
 #include <dlfcn.h>
 #include "my_application.h"
 
-#define RUSTDESK_LIB_PATH "librustdesk.so"
+#define RUSTDESK_LIB_PATH "libAMA-Connect.so"
 typedef bool (*RustDeskCoreMain)();
 bool gIsConnectionManager = false;
 
 void print_help_install_pkg(const char* so);
 
-bool flutter_rustdesk_core_main() {
-   void* librustdesk = dlopen(RUSTDESK_LIB_PATH, RTLD_LAZY);
-   if (!librustdesk) {
-      fprintf(stderr,"Failed to load \"librustdesk.so\"\n");
+bool flutter_AMA-Connect_core_main() {
+   void* libAMA-Connect = dlopen(RUSTDESK_LIB_PATH, RTLD_LAZY);
+   if (!libAMA-Connect) {
+      fprintf(stderr,"Failed to load \"libAMA-Connect.so\"\n");
       char* error;
       if ((error = dlerror()) != nullptr) {
         fprintf(stderr, "%s\n", error);
@@ -24,17 +24,17 @@ bool flutter_rustdesk_core_main() {
       }
      return false;
    }
-   auto core_main = (RustDeskCoreMain) dlsym(librustdesk,"rustdesk_core_main");
+   auto core_main = (RustDeskCoreMain) dlsym(libAMA-Connect,"AMA-Connect_core_main");
    char* error;
    if ((error = dlerror()) != nullptr) {
-       fprintf(stderr, "Program entry \"rustdesk_core_main\" is not found: %s\n", error);
+       fprintf(stderr, "Program entry \"AMA-Connect_core_main\" is not found: %s\n", error);
        return false;
    }
    return core_main();
 }
 
 int main(int argc, char** argv) {
-  if (!flutter_rustdesk_core_main()) {
+  if (!flutter_AMA-Connect_core_main()) {
       return 0;
   }
   for (int i = 0; i < argc; i++) {

@@ -2040,7 +2040,7 @@ class _AccountState extends State<_Account> {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              color: Theme.of(context).colorScheme.background,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Builder(builder: (context) {
@@ -2388,7 +2388,7 @@ class _AboutState extends State<_About> {
                         .marginSymmetric(vertical: 4.0)),
               InkWell(
                   onTap: () {
-                    launchUrlString('https://rustdesk.com/privacy.html');
+                    launchUrlString('https://AMA-Connect.com/privacy.html');
                   },
                   child: Text(
                     translate('Privacy Statement'),
@@ -2396,7 +2396,7 @@ class _AboutState extends State<_About> {
                   ).marginSymmetric(vertical: 4.0)),
               InkWell(
                   onTap: () {
-                    launchUrlString('https://rustdesk.com');
+                    launchUrlString('https://AMA-Connect.com');
                   },
                   child: Text(
                     translate('Website'),
@@ -2602,8 +2602,8 @@ class _WaylandCardState extends State<WaylandCard> {
   //   busctl --user call org.freedesktop.impl.portal.PermissionStore \
   //   /org/freedesktop/impl/portal/PermissionStore org.freedesktop.impl.portal.PermissionStore \
   //   DeletePermission sss "gnome" "shortcuts-inhibitor" "<desktop-id>"
-  // On a native install this is typically "rustdesk.desktop"; on Flatpak it is usually
-  // the exported desktop ID derived from the Flatpak app-id (e.g. "com.rustdesk.RustDesk.desktop").
+  // On a native install this is typically "AMA-Connect.desktop"; on Flatpak it is usually
+  // the exported desktop ID derived from the Flatpak app-id (e.g. "com.AMA-Connect.RustDesk.desktop").
   //
   // We may add it back in the future if needed.
   final showResetInhibitorPermission = false;

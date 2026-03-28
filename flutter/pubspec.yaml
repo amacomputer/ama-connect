@@ -45,6 +45,7 @@ dependencies:
   settings_ui: ^2.0.2
   flutter_breadcrumb: ^1.0.1
   http: ^1.1.0
+  shared_preferences: ^2.2.0
   qr_code_scanner: ^1.0.0
   zxing2: ^0.2.0
   image_picker: ^1.1.2
@@ -105,7 +106,7 @@ dependencies:
   pull_down_button: ^0.9.3
   device_info_plus: ^9.1.0
   qr_flutter: ^4.1.0
-  extended_text: 14.0.0
+  extended_text: ^13.1.0
   xterm: 4.0.0
   sqflite: 2.2.0
   google_fonts: ^6.2.1

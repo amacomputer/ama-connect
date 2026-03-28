@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const String kApiBase = 'https://connect.ama-computer.com';
@@ -26,17 +26,22 @@ class _LoginPageState extends State<LoginPage> {
     setState(() { _loading = true; _error = ''; });
 
     try {
-      final response = await http.post(
-        Uri.parse('$kApiBase/api/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'username': _usernameCtrl.text.trim(),
-          'password': _passwordCtrl.text,
-          'hostname_source': 'PC-WINDOWS',
-        }),
-      );
+      final httpClient = HttpClient();
+      httpClient.badCertificateCallback = (cert, host, port) => true;
+      httpClient.connectionTimeout = const Duration(seconds: 10);
 
-      final data = jsonDecode(response.body);
+      final uri = Uri.parse('$kApiBase/api/auth/login');
+      final request = await httpClient.postUrl(uri);
+      request.headers.set('Content-Type', 'application/json');
+      request.write(jsonEncode({
+        'username': _usernameCtrl.text.trim(),
+        'password': _passwordCtrl.text,
+        'hostname_source': Platform.localHostname,
+      }));
+
+      final response = await request.close().timeout(const Duration(seconds: 10));
+      final responseBody = await response.transform(utf8.decoder).join();
+      final data = jsonDecode(responseBody);
 
       if (data['autorise'] == true) {
         final prefs = await SharedPreferences.getInstance();
@@ -50,12 +55,12 @@ class _LoginPageState extends State<LoginPage> {
           _error = data['message'] ?? 'Identifiants incorrects';
           if (_tentatives >= 3) {
             _bloque = true;
-            _error = 'Compte bloqué après 3 tentatives. Contactez l\'administrateur.';
+            _error = 'Compte bloqué après 3 tentatives.';
           }
         });
       }
     } catch (e) {
-      setState(() { _error = 'Erreur de connexion au serveur AMA Connect'; });
+      setState(() { _error = 'Erreur: ${e.toString()}\n${e.runtimeType}'; });
     }
 
     setState(() { _loading = false; });
@@ -83,21 +88,16 @@ class _LoginPageState extends State<LoginPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Logo AMA
               Container(
-                width: 64,
-                height: 64,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
                   color: const Color(0xFF0164EC),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(18),
                 ),
-                child: const Center(
-                  child: Text('AMA',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
+                child: CustomPaint(
+                  painter: _AmaLogoPainter(),
                 ),
               ),
               const SizedBox(height: 16),
@@ -179,4 +179,50 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
+}
+
+class _AmaLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    final w = size.width;
+    final h = size.height;
+
+    // Circuit board design
+    final strokePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+
+    // Horizontal lines
+    canvas.drawLine(Offset(w * 0.15, h * 0.35), Offset(w * 0.85, h * 0.35), strokePaint);
+    canvas.drawLine(Offset(w * 0.15, h * 0.5), Offset(w * 0.85, h * 0.5), strokePaint);
+    canvas.drawLine(Offset(w * 0.15, h * 0.65), Offset(w * 0.85, h * 0.65), strokePaint);
+
+    // Vertical connectors
+    canvas.drawLine(Offset(w * 0.3, h * 0.2), Offset(w * 0.3, h * 0.8), strokePaint);
+    canvas.drawLine(Offset(w * 0.5, h * 0.2), Offset(w * 0.5, h * 0.8), strokePaint);
+    canvas.drawLine(Offset(w * 0.7, h * 0.2), Offset(w * 0.7, h * 0.8), strokePaint);
+
+    // Dots at intersections
+    for (final x in [0.3, 0.5, 0.7]) {
+      for (final y in [0.35, 0.5, 0.65]) {
+        canvas.drawCircle(Offset(w * x, h * y), 3, paint);
+      }
+    }
+
+    // Center square
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(w * 0.5, h * 0.5), width: w * 0.25, height: h * 0.25),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(rect, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
