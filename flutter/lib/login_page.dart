@@ -28,7 +28,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final httpClient = HttpClient();
       httpClient.badCertificateCallback = (cert, host, port) => true;
-      httpClient.connectionTimeout = const Duration(seconds: 10);
+      httpClient.connectionTimeout = const Duration(seconds: 30);
 
       final uri = Uri.parse('$kApiBase/api/auth/login');
       final request = await httpClient.postUrl(uri);
@@ -39,7 +39,7 @@ class _LoginPageState extends State<LoginPage> {
         'hostname_source': Platform.localHostname,
       }));
 
-      final response = await request.close().timeout(const Duration(seconds: 10));
+      final response = await request.close().timeout(const Duration(seconds: 30));
       final responseBody = await response.transform(utf8.decoder).join();
       final data = jsonDecode(responseBody);
 

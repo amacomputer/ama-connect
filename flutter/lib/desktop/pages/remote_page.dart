@@ -1,5 +1,7 @@
 import 'dart:async';
-
+import 'dart:convert';
+import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -91,12 +93,8 @@ class _RemotePageState extends State<RemotePage>
 
   final FocusNode _rawKeyFocusNode = FocusNode(debugLabel: "rawkeyFocusNode");
 
-  // Debounce timer for pointer lock center updates during window events.
-  // Uses kDefaultPointerLockCenterThrottleMs from consts.dart for the duration.
   Timer? _pointerLockCenterDebounceTimer;
 
-  // We need `_instanceIdOnEnterOrLeaveImage4Toolbar` together with `_onEnterOrLeaveImage4Toolbar`
-  // to identify the toolbar instance and its callback function.
   int? _instanceIdOnEnterOrLeaveImage4Toolbar;
   Function(bool)? _onEnterOrLeaveImage4Toolbar;
 
@@ -150,37 +148,20 @@ class _RemotePageState extends State<RemotePage>
     _ffi.qualityMonitorModel.checkShowQualityMonitor(sessionId);
     _ffi.dialogManager.loadMobileActionsOverlayVisible();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Session option should be set after models.dart/FFI.start
       _showRemoteCursor.value = bind.sessionGetToggleOptionSync(
           sessionId: sessionId, arg: 'show-remote-cursor');
       _zoomCursor.value = bind.sessionGetToggleOptionSync(
           sessionId: sessionId, arg: kOptionZoomCursor);
     });
     DesktopMultiWindow.addListener(this);
-    // if (!_isCustomCursorInited) {
-    //   customCursorController.registerNeedUpdateCursorCallback(
-    //       (String? lastKey, String? currentKey) async {
-    //     if (_firstEnterImage.value) {
-    //       _firstEnterImage.value = false;
-    //       return true;
-    //     }
-    //     return lastKey == null || lastKey != currentKey;
-    //   });
-    //   _isCustomCursorInited = true;
-    // }
-
     _blockableOverlayState.applyFfi(_ffi);
-    // Call onSelected in post frame callback, since we cannot guarantee that the callback will not call setState.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.tabController?.onSelected?.call(widget.id);
     });
-
-    // Register callback to cancel debounce timer when relative mouse mode is disabled
     _ffi.inputModel.onRelativeMouseModeDisabled =
         _cancelPointerLockCenterDebounceTimer;
   }
 
-  /// Cancel the pointer lock center debounce timer
   void _cancelPointerLockCenterDebounceTimer() {
     _pointerLockCenterDebounceTimer?.cancel();
     _pointerLockCenterDebounceTimer = null;
@@ -189,20 +170,11 @@ class _RemotePageState extends State<RemotePage>
   @override
   void onWindowBlur() {
     super.onWindowBlur();
-    // On windows, we use `focus` way to handle keyboard better.
-    // Now on Linux, there's some rdev issues which will break the input.
-    // We disable the `focus` way for non-Windows temporarily.
     if (isWindows) {
       _isWindowBlur = true;
-      // unfocus the primary-focus when the whole window is lost focus,
-      // and let OS to handle events instead.
       _rawKeyFocusNode.unfocus();
     }
     stateGlobal.isFocused.value = false;
-
-    // When window loses focus, temporarily release relative mouse mode constraints
-    // to allow user to interact with other applications normally.
-    // The cursor will be re-hidden and re-centered when window regains focus.
     if (_ffi.inputModel.relativeMouseMode.value) {
       _ffi.inputModel.onWindowBlur();
     }
@@ -211,13 +183,10 @@ class _RemotePageState extends State<RemotePage>
   @override
   void onWindowFocus() {
     super.onWindowFocus();
-    // See [onWindowBlur].
     if (isWindows) {
       _isWindowBlur = false;
     }
     stateGlobal.isFocused.value = true;
-
-    // Restore relative mouse mode constraints when window regains focus.
     if (_ffi.inputModel.relativeMouseMode.value) {
       _rawKeyFocusNode.requestFocus();
       _ffi.inputModel.onWindowFocus();
@@ -227,45 +196,34 @@ class _RemotePageState extends State<RemotePage>
   @override
   void onWindowRestore() {
     super.onWindowRestore();
-    // On windows, we use `onWindowRestore` way to handle window restore from
-    // a minimized state.
     if (isWindows) {
       _isWindowBlur = false;
     }
     WakelockManager.enable(_uniqueKey);
-    // Update pointer lock center when window is restored
     _updatePointerLockCenterIfNeeded();
   }
 
-  // When the window is unminimized, onWindowMaximize or onWindowRestore can be called when the old state was maximized or not.
   @override
   void onWindowMaximize() {
     super.onWindowMaximize();
     WakelockManager.enable(_uniqueKey);
-    // Update pointer lock center when window is maximized
     _updatePointerLockCenterIfNeeded();
   }
 
   @override
   void onWindowResize() {
     super.onWindowResize();
-    // Update pointer lock center when window is resized
     _updatePointerLockCenterIfNeeded();
   }
 
   @override
   void onWindowMove() {
     super.onWindowMove();
-    // Update pointer lock center when window is moved
     _updatePointerLockCenterIfNeeded();
   }
 
-  /// Update pointer lock center with debouncing to avoid excessive updates
-  /// during rapid window move/resize events.
   void _updatePointerLockCenterIfNeeded() {
     if (!_ffi.inputModel.relativeMouseMode.value) return;
-
-    // Cancel any pending update and schedule a new one (debounce pattern)
     _pointerLockCenterDebounceTimer?.cancel();
     _pointerLockCenterDebounceTimer = Timer(
       const Duration(milliseconds: kDefaultPointerLockCenterThrottleMs),
@@ -282,7 +240,6 @@ class _RemotePageState extends State<RemotePage>
   void onWindowMinimize() {
     super.onWindowMinimize();
     WakelockManager.disable(_uniqueKey);
-    // Release cursor constraints when minimized
     if (_ffi.inputModel.relativeMouseMode.value) {
       _ffi.inputModel.onWindowBlur();
     }
@@ -307,23 +264,14 @@ class _RemotePageState extends State<RemotePage>
   @override
   Future<void> dispose() async {
     final closeSession = closeSessionOnDispose.remove(widget.id) ?? true;
-
-    // https://github.com/flutter/flutter/issues/64935
     super.dispose();
     debugPrint("REMOTE PAGE dispose session $sessionId ${widget.id}");
-
-    // Defensive cleanup: ensure host system-key propagation is reset even if
-    // MouseRegion.onExit never fired (e.g., tab closed while cursor inside).
     if (!isWeb) bind.hostStopSystemKeyPropagate(stopped: true);
-
     _pointerLockCenterDebounceTimer?.cancel();
     _pointerLockCenterDebounceTimer = null;
-    // Clear callback reference to prevent memory leaks and stale references
     _ffi.inputModel.onRelativeMouseModeDisabled = null;
-    // Relative mouse mode cleanup is centralized in FFI.close(closeSession: ...).
     _ffi.textureModel.onRemotePageDispose(closeSession);
     if (closeSession) {
-      // ensure we leave this session, this is a double check
       _ffi.inputModel.enterOrLeave(false);
     }
     DesktopMultiWindow.removeListener(this);
@@ -331,6 +279,9 @@ class _RemotePageState extends State<RemotePage>
     _ffi.imageModel.disposeImage();
     _ffi.cursorModel.disposeImages();
     _rawKeyFocusNode.dispose();
+    if (closeSession) {
+      unawaited(_logConnexionFin());
+    }
     await _ffi.close(closeSession: closeSession);
     _timer?.cancel();
     _ffi.dialogManager.dismissAll();
@@ -343,9 +294,36 @@ class _RemotePageState extends State<RemotePage>
     removeSharedStates(widget.id);
   }
 
+  Future<void> _logConnexionFin() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('ama_token') ?? '';
+      final connexionId = prefs.getString('ama_connexion_id') ?? '';
+      if (token.isEmpty || connexionId.isEmpty) return;
+      final debut = prefs.getInt('ama_connexion_debut') ?? 0;
+      final duree = debut > 0
+          ? ((DateTime.now().millisecondsSinceEpoch - debut) / 1000).round()
+          : 0;
+      final httpClient = HttpClient();
+      httpClient.badCertificateCallback = (cert, host, port) => true;
+      final uri = Uri.parse(
+          'https://connect.ama-computer.com/api/connexion/fin');
+      final request = await httpClient.postUrl(uri);
+      request.headers.set('Content-Type', 'application/json');
+      request.headers.set('Authorization', 'Bearer $token');
+      request.write(jsonEncode({
+        'connexion_id': connexionId,
+        'duree_secondes': duree,
+      }));
+      await request.close().timeout(const Duration(seconds: 5));
+      await prefs.remove('ama_connexion_id');
+      await prefs.remove('ama_connexion_debut');
+    } catch (e) {
+      debugPrint('Log connexion fin error: $e');
+    }
+  }
+
   Widget emptyOverlay() => BlockableOverlay(
-        /// the Overlay key will be set with _blockableOverlayState in BlockableOverlay
-        /// see override build() in [BlockableOverlay]
         state: _blockableOverlayState,
         underlying: Container(
           color: Colors.transparent,
@@ -362,8 +340,6 @@ class _RemotePageState extends State<RemotePage>
             _onEnterOrLeaveImage4Toolbar = func;
           },
           onEnterOrLeaveImageCleaner: (id) {
-            // If _instanceIdOnEnterOrLeaveImage4Toolbar != id
-            // it means `_onEnterOrLeaveImage4Toolbar` is not set or it has been changed to another toolbar.
             if (_instanceIdOnEnterOrLeaveImage4Toolbar == id) {
               _instanceIdOnEnterOrLeaveImage4Toolbar = null;
               _onEnterOrLeaveImage4Toolbar = null;
@@ -382,7 +358,6 @@ class _RemotePageState extends State<RemotePage>
                   onFocusChange: (bool imageFocused) {
                     debugPrint(
                         "onFocusChange(window active:${!_isWindowBlur}) $imageFocused");
-                    // See [onWindowBlur].
                     if (isWindows) {
                       if (_isWindowBlur) {
                         imageFocused = false;
@@ -421,9 +396,6 @@ class _RemotePageState extends State<RemotePage>
                             ));
                       }
                     }(),
-              // Use Overlay to enable rebuild every time on menu button click.
-              // Hide toolbar when relative mouse mode is active to prevent
-              // cursor from escaping to toolbar area.
               Obx(() => _ffi.inputModel.relativeMouseMode.value
                   ? const Offstage()
                   : _ffi.ffiModel.pi.isSet.isTrue
@@ -444,25 +416,17 @@ class _RemotePageState extends State<RemotePage>
         final imageReady = _ffi.ffiModel.pi.isSet.isTrue &&
             _ffi.ffiModel.waitForFirstImage.isFalse;
         if (imageReady) {
-          // If the privacy mode(disable physical displays) is switched,
-          // we should not dismiss the dialog immediately.
           if (DateTime.now().difference(togglePrivacyModeTime) >
               const Duration(milliseconds: 3000)) {
-            // `dismissAll()` is to ensure that the state is clean.
-            // It's ok to call dismissAll() here.
             _ffi.dialogManager.dismissAll();
-            // Recreate the block state to refresh the state.
             _blockableOverlayState = BlockableOverlayState();
             _blockableOverlayState.applyFfi(_ffi);
           }
-          // Block the whole `bodyWidget()` when dialog shows.
           return BlockableOverlay(
             underlying: bodyWidget(),
             state: _blockableOverlayState,
           );
         } else {
-          // `_blockableOverlayState` is not recreated here.
-          // The toolbar's block state won't work properly when reconnecting, but that's okay.
           return bodyWidget();
         }
       }),
@@ -488,18 +452,13 @@ class _RemotePageState extends State<RemotePage>
 
   void enterView(PointerEnterEvent evt) {
     _ffi.canvasModel.rearmEdgeScroll();
-
     _cursorOverImage.value = true;
     _firstEnterImage.value = true;
     if (_onEnterOrLeaveImage4Toolbar != null) {
       try {
         _onEnterOrLeaveImage4Toolbar!(true);
-      } catch (e) {
-        //
-      }
+      } catch (e) {}
     }
-
-    // See [onWindowBlur].
     if (!isWindows) {
       if (!_rawKeyFocusNode.hasFocus) {
         _rawKeyFocusNode.requestFocus();
@@ -510,22 +469,16 @@ class _RemotePageState extends State<RemotePage>
 
   void leaveView(PointerExitEvent evt) {
     _ffi.canvasModel.disableEdgeScroll();
-
     if (_ffi.ffiModel.keyboard) {
       _ffi.inputModel.tryMoveEdgeOnExit(evt.position);
     }
-
     _cursorOverImage.value = false;
     _firstEnterImage.value = false;
     if (_onEnterOrLeaveImage4Toolbar != null) {
       try {
         _onEnterOrLeaveImage4Toolbar!(false);
-      } catch (e) {
-        //
-      }
+      } catch (e) {}
     }
-
-    // See [onWindowBlur].
     if (!isWindows) {
       _ffi.inputModel.enterOrLeave(false);
     }
@@ -551,11 +504,6 @@ class _RemotePageState extends State<RemotePage>
       onEnter: onEnter,
       onExit: onExit,
       onPointerDown: (event) {
-        // A double check for blur status.
-        // Note: If there's an `onPointerDown` event is triggered, `_isWindowBlur` is expected being false.
-        // Sometimes the system does not send the necessary focus event to flutter. We should manually
-        // handle this inconsistent status by setting `_isWindowBlur` to false. So we can
-        // ensure the grab-key thread is running when our users are clicking the remote canvas.
         if (_isWindowBlur) {
           debugPrint(
               "Unexpected status: onPointerDown is triggered while the remote window is in blur status");
@@ -635,7 +583,6 @@ class _RemotePageState extends State<RemotePage>
 
 /// A widget that tracks the view size and updates CanvasModel.updateViewStyle()
 /// and InputModel.updateImageWidgetSize() only when size actually changes.
-/// This avoids scheduling post-frame callbacks on every LayoutBuilder rebuild.
 class _ViewStyleUpdater extends StatefulWidget {
   final CanvasModel canvasModel;
   final InputModel inputModel;
@@ -662,16 +609,12 @@ class _ViewStyleUpdaterState extends State<_ViewStyleUpdater> {
       builder: (context, constraints) {
         final maxWidth = constraints.maxWidth;
         final maxHeight = constraints.maxHeight;
-        // Guard against infinite constraints (e.g., unconstrained ancestor).
         if (!maxWidth.isFinite || !maxHeight.isFinite) {
           return widget.child;
         }
         final newSize = Size(maxWidth, maxHeight);
         if (_lastSize != newSize) {
           _lastSize = newSize;
-          // Schedule the update for after the current frame to avoid setState during build.
-          // Use _callbackScheduled flag to prevent accumulating multiple callbacks
-          // when size changes rapidly before any callback executes.
           if (!_callbackScheduled) {
             _callbackScheduled = true;
             SchedulerBinding.instance.addPostFrameCallback((_) {
@@ -738,7 +681,6 @@ class _ImagePaintState extends State<ImagePaint> {
             var c = Provider.of<CanvasModel>(context);
             var cursorScale = 1.0;
             if (isWindows) {
-              // debug win10
               if (zoomCursor.value && isViewAdaptive()) {
                 cursorScale = s * c.devicePixelRatio;
               }
@@ -754,7 +696,6 @@ class _ImagePaintState extends State<ImagePaint> {
               cursor: cursorOverImage.isTrue
                   ? c.cursorEmbedded
                       ? SystemMouseCursors.none
-                      // Hide cursor when relative mouse mode is active
                       : widget.ffi.inputModel.relativeMouseMode.value
                           ? SystemMouseCursors.none
                           : keyboardEnabled.isTrue
@@ -863,7 +804,6 @@ class _ImagePaintState extends State<ImagePaint> {
       final textureId = widget.ffi.textureModel
           .getTextureId(curDisplay == kAllDisplayValue ? i : curDisplay);
       if (true) {
-        // both "textureId.value != -1" and "true" seems ok
         final sizeScale = isPeerLinux ? s / displays[i].scale : s;
         children.add(Positioned(
           left: (displays[i].x - rect.left) * s + offset.dx,
@@ -1018,7 +958,6 @@ class CursorPaint extends StatelessWidget {
         c.scrollStyle == ScrollStyle.scrollbar) {
       final rect = c.parent.target!.ffiModel.rect;
       if (rect == null) {
-        // unreachable!
         debugPrint('unreachable! The displays rect is null.');
         return Container();
       }

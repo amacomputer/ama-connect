@@ -409,7 +409,7 @@ class MyTheme {
         bodyMedium:
             TextStyle(fontSize: 14, color: Colors.black87, height: 1.25),
         labelLarge: TextStyle(fontSize: 16.0, color: MyTheme.accent80)),
-    cardColor: grayBg,
+    cardColor: Colors.white,
     hintColor: Color(0xFFAAAAAA),
     visualDensity: VisualDensity.adaptivePlatformDensity,
     tabBarTheme: const TabBarTheme(
@@ -454,8 +454,8 @@ class MyTheme {
         style:
             MenuStyle(backgroundColor: MaterialStatePropertyAll(Colors.white))),
     colorScheme: ColorScheme.light(
-        primary: Colors.blue, secondary: accent, background: const Color(0xFF0D2665)),
-    popupMenuTheme: PopupMenuThemeData(
+        primary: Colors.blue, secondary: accent, background: grayBg),
+    popupMenuTheme:  PopupMenuThemeData(
         color: Colors.white,
         shape: RoundedRectangleBorder(
           side: BorderSide(

@@ -137,7 +137,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         ),
         child: Container(
           width: isIncomingOnly ? 280.0 : 200.0,
-          color: Theme.of(context).colorScheme.background,
+          color: const Color(0xFF0D2665),
           child: Stack(
           children: [
             Column(
@@ -468,12 +468,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
     if (isWindows && !bind.isDisableInstallation()) {
       if (!bind.mainIsInstalled()) {
-        return buildInstallCard(
-            "", bind.isOutgoingOnly() ? "" : "install_tip", "Install",
-            () async {
-          await rustDeskWinManager.closeAllSubWindows();
-          bind.mainGotoInstall();
-        });
+        return const SizedBox.shrink();
       } else if (bind.mainIsInstalledLowerVersion()) {
         return buildInstallCard(
             "Status", "Your installation is lower version.", "Click to upgrade",

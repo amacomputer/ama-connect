@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/widgets/popup_menu.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter_hbb/models/peer_model.dart';
@@ -31,7 +33,6 @@ class OnlineStatusWidget extends StatefulWidget {
   State<OnlineStatusWidget> createState() => _OnlineStatusWidgetState();
 }
 
-/// State for the connection page.
 class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
   final _svcStopped = Get.find<RxBool>(tag: 'stop-service');
   final _svcIsUsingPublicServer = true.obs;
@@ -129,10 +130,7 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
               width: isIncomingOnly ? 226 : null,
               child: _buildConnStatusMsg(),
             ),
-            // stop
             if (!isIncomingOnly) startServiceWidget(),
-            // ready && public
-            // No need to show the guide if is custom client.
             if (!isIncomingOnly) setupServerWidget(),
           ],
         );
@@ -187,7 +185,6 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
   }
 }
 
-/// Connection page for connecting to a remote peer.
 class ConnectionPage extends StatefulWidget {
   const ConnectionPage({Key? key}) : super(key: key);
 
@@ -195,26 +192,18 @@ class ConnectionPage extends StatefulWidget {
   State<ConnectionPage> createState() => _ConnectionPageState();
 }
 
-/// State for the connection page.
 class _ConnectionPageState extends State<ConnectionPage>
     with SingleTickerProviderStateMixin, WindowListener {
-  /// Controller for the id input bar.
   final _idController = IDTextEditingController();
-
   final RxBool _idInputFocused = false.obs;
   final FocusNode _idFocusNode = FocusNode();
   final TextEditingController _idEditingController = TextEditingController();
-
   String selectedConnectionType = 'Connect';
-
   bool isWindowMinimized = false;
-
   final AllPeersLoader _allPeersLoader = AllPeersLoader();
-
-  // https://github.com/flutter/flutter/issues/157244
   Iterable<Peer> _autocompleteOpts = [];
-
   final _menuOpen = false.obs;
+  bool _connexionEnCours = false;
 
   @override
   void initState() {
@@ -238,6 +227,7 @@ class _ConnectionPageState extends State<ConnectionPage>
 
   @override
   void dispose() {
+    unawaited(_logConnexionFin());
     _idController.dispose();
     windowManager.removeListener(this);
     _allPeersLoader.clear();
@@ -260,7 +250,6 @@ class _ConnectionPageState extends State<ConnectionPage>
       isWindowMinimized = true;
     } else if (eventName == 'maximize' || eventName == 'restore') {
       if (isWindowMinimized && isWindows) {
-        // windows can't update when minimized.
         Get.forceAppUpdate();
       }
       isWindowMinimized = false;
@@ -269,13 +258,11 @@ class _ConnectionPageState extends State<ConnectionPage>
 
   @override
   void onWindowEnterFullScreen() {
-    // Remove edge border by setting the value to zero.
     stateGlobal.resizeEdgeSize.value = 0;
   }
 
   @override
   void onWindowLeaveFullScreen() {
-    // Restore edge border to default edge size.
     stateGlobal.resizeEdgeSize.value = stateGlobal.isMaximized.isTrue
         ? kMaximizeEdgeSize
         : windowResizeEdgeSize;
@@ -284,6 +271,7 @@ class _ConnectionPageState extends State<ConnectionPage>
   @override
   void onWindowClose() {
     super.onWindowClose();
+    _logConnexionFin();
     bind.mainOnMainWindowClose();
   }
 
@@ -293,9 +281,7 @@ class _ConnectionPageState extends State<ConnectionPage>
       if (_allPeersLoader.needLoad) {
         _allPeersLoader.getAllPeers();
       }
-
       final textLength = _idEditingController.value.text.length;
-      // Select all to facilitate removing text, just following the behavior of address input of chrome.
       _idEditingController.selection =
           TextSelection(baseOffset: 0, extentOffset: textLength);
     }
@@ -325,21 +311,132 @@ class _ConnectionPageState extends State<ConnectionPage>
     );
   }
 
-  /// Callback for the connect button.
-  /// Connects to the selected peer.
   void onConnect(
       {bool isFileTransfer = false,
       bool isViewCamera = false,
       bool isTerminal = false}) {
     var id = _idController.id;
+    _logConnexionDebut(id);
     connect(context, id,
         isFileTransfer: isFileTransfer,
         isViewCamera: isViewCamera,
         isTerminal: isTerminal);
   }
 
-  /// UI for the remote ID TextField.
-  /// Search for a peer.
+  Future<String> _getIpLocale() async {
+  try {
+    final interfaces = await NetworkInterface.list();
+    // Priorité : Ethernet puis WiFi, ignorer VPN/loopback
+    for (var i in interfaces) {
+      final name = i.name.toLowerCase();
+      if (name.contains('ethernet') || name.contains('eth') || name.contains('wi-fi') || name.contains('wlan')) {
+        for (var addr in i.addresses) {
+          if (!addr.isLoopback && addr.type == InternetAddressType.IPv4) {
+            return addr.address;
+          }
+        }
+      }
+    }
+    // Fallback : première IPv4 non loopback
+    for (var i in interfaces) {
+      for (var addr in i.addresses) {
+        if (!addr.isLoopback && addr.type == InternetAddressType.IPv4) {
+          return addr.address;
+        }
+      }
+    }
+  } catch (e) {}
+  return '';
+}
+
+  Future<void> _logConnexionDebut(String idCible) async {
+    if (_connexionEnCours) return;
+    _connexionEnCours = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('ama_token') ?? '';
+      final sessionId = prefs.getString('ama_session_id') ?? '';
+      if (token.isEmpty || sessionId.isEmpty) {
+        _connexionEnCours = false;
+        return;
+      }
+      final ipSource = await _getIpLocale();
+      final httpClient = HttpClient();
+      httpClient.badCertificateCallback = (cert, host, port) => true;
+      final uri = Uri.parse('https://connect.ama-computer.com/api/connexion/debut');
+      final request = await httpClient.postUrl(uri);
+      request.headers.set('Content-Type', 'application/json');
+      request.headers.set('Authorization', 'Bearer $token');
+      request.write(jsonEncode({
+        'session_id': sessionId,
+        'id_machine_source': gFFI.serverModel.serverId.text,
+        'id_machine_cible': idCible,
+        'hostname_cible': idCible,
+        'ip_source': ipSource,
+        'ip_cible': '',
+      }));
+      final response = await request.close().timeout(const Duration(seconds: 5));
+      final body = await response.transform(utf8.decoder).join();
+      final data = jsonDecode(body);
+      if (response.statusCode == 403) {
+        final detail = data['detail'] ?? 'Limite de machines atteinte';
+        // Afficher une dialog d'erreur
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text('Connexion refusée'),
+              content: Text(detail),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                )
+              ],
+            ),
+          );
+        }
+        return;
+      }
+      if (data['connexion_id'] != null) {
+        await prefs.setString('ama_connexion_id', data['connexion_id']);
+        await prefs.setInt('ama_connexion_debut', DateTime.now().millisecondsSinceEpoch);
+      }
+    } catch (e) {
+      debugPrint('Log connexion error: $e');
+    } finally {
+      _connexionEnCours = false;
+    }
+  }
+
+  Future<void> _logConnexionFin() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('ama_token') ?? '';
+      final connexionId = prefs.getString('ama_connexion_id') ?? '';
+      if (token.isEmpty || connexionId.isEmpty) return;
+      final debut = prefs.getInt('ama_connexion_debut') ?? 0;
+      final duree = debut > 0
+          ? ((DateTime.now().millisecondsSinceEpoch - debut) / 1000).round()
+          : 0;
+      final httpClient = HttpClient();
+      httpClient.badCertificateCallback = (cert, host, port) => true;
+      final uri = Uri.parse('https://connect.ama-computer.com/api/connexion/fin');
+      final request = await httpClient.postUrl(uri);
+      request.headers.set('Content-Type', 'application/json');
+      request.headers.set('Authorization', 'Bearer $token');
+      request.write(jsonEncode({
+        'connexion_id': connexionId,
+        'duree_secondes': duree,
+      }));
+      await request.close().timeout(const Duration(seconds: 5));
+      await prefs.remove('ama_connexion_id');
+      await prefs.remove('ama_connexion_debut');
+    } catch (e) {
+      debugPrint('Log connexion fin error: $e');
+    }
+  }
+
   Widget _buildRemoteIDTextField(BuildContext context) {
     var w = Container(
       width: 320 + 20 * 2,
