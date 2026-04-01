@@ -204,6 +204,7 @@ class _ConnectionPageState extends State<ConnectionPage>
   Iterable<Peer> _autocompleteOpts = [];
   final _menuOpen = false.obs;
   bool _connexionEnCours = false;
+  static DateTime? _derniereConnexion;
 
   @override
   void initState() {
@@ -311,12 +312,24 @@ class _ConnectionPageState extends State<ConnectionPage>
     );
   }
 
-  void onConnect(
+  void onConnect({
+    bool isFileTransfer = false,
+    bool isViewCamera = false,
+    bool isTerminal = false,
+  }) {
+    var id = _idController.id;
+    _verifierEtConnecter(id,
+        isFileTransfer: isFileTransfer,
+        isViewCamera: isViewCamera,
+        isTerminal: isTerminal);
+  }
+
+  Future<void> _verifierEtConnecter(String id,
       {bool isFileTransfer = false,
       bool isViewCamera = false,
-      bool isTerminal = false}) {
-    var id = _idController.id;
-    _logConnexionDebut(id);
+      bool isTerminal = false}) async {
+    final autorise = await _logConnexionDebut(id);
+    if (!autorise) return;
     connect(context, id,
         isFileTransfer: isFileTransfer,
         isViewCamera: isViewCamera,
@@ -324,63 +337,74 @@ class _ConnectionPageState extends State<ConnectionPage>
   }
 
   Future<String> _getIpLocale() async {
-  try {
-    final interfaces = await NetworkInterface.list();
-    // Priorité : Ethernet puis WiFi, ignorer VPN/loopback
-    for (var i in interfaces) {
-      final name = i.name.toLowerCase();
-      if (name.contains('ethernet') || name.contains('eth') || name.contains('wi-fi') || name.contains('wlan')) {
+    try {
+      final interfaces = await NetworkInterface.list();
+      for (var i in interfaces) {
+        final name = i.name.toLowerCase();
+        if (name.contains('ethernet') ||
+            name.contains('eth') ||
+            name.contains('wi-fi') ||
+            name.contains('wlan')) {
+          for (var addr in i.addresses) {
+            if (!addr.isLoopback && addr.type == InternetAddressType.IPv4) {
+              return addr.address;
+            }
+          }
+        }
+      }
+      for (var i in interfaces) {
         for (var addr in i.addresses) {
           if (!addr.isLoopback && addr.type == InternetAddressType.IPv4) {
             return addr.address;
           }
         }
       }
-    }
-    // Fallback : première IPv4 non loopback
-    for (var i in interfaces) {
-      for (var addr in i.addresses) {
-        if (!addr.isLoopback && addr.type == InternetAddressType.IPv4) {
-          return addr.address;
-        }
-      }
-    }
-  } catch (e) {}
-  return '';
-}
+    } catch (e) {}
+    return '';
+  }
 
-  Future<void> _logConnexionDebut(String idCible) async {
-    if (_connexionEnCours) return;
+  Future<bool> _logConnexionDebut(String idCible) async {
+    // Guard anti-doublon : 3 secondes minimum entre deux connexions
+    final now = DateTime.now();
+    if (_derniereConnexion != null &&
+        now.difference(_derniereConnexion!).inSeconds < 3) {
+      return true;
+    }
+    _derniereConnexion = now;
+
+    if (_connexionEnCours) return true;
     _connexionEnCours = true;
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('ama_token') ?? '';
       final sessionId = prefs.getString('ama_session_id') ?? '';
       if (token.isEmpty || sessionId.isEmpty) {
-        _connexionEnCours = false;
-        return;
+        return true; // Pas connecté, on laisse passer
       }
       final ipSource = await _getIpLocale();
       final httpClient = HttpClient();
       httpClient.badCertificateCallback = (cert, host, port) => true;
-      final uri = Uri.parse('https://connect.ama-computer.com/api/connexion/debut');
+      final uri =
+          Uri.parse('https://connect.ama-computer.com/api/connexion/debut');
       final request = await httpClient.postUrl(uri);
       request.headers.set('Content-Type', 'application/json');
       request.headers.set('Authorization', 'Bearer $token');
       request.write(jsonEncode({
         'session_id': sessionId,
-        'id_machine_source': gFFI.serverModel.serverId.text,
-        'id_machine_cible': idCible,
-        'hostname_cible': idCible,
+        'id_machine_source': gFFI.serverModel.serverId.text.replaceAll(' ', ''),
+        'hostname_source': Platform.localHostname,
+        'id_machine_cible': idCible.replaceAll(' ', ''),
+        'hostname_cible': idCible.replaceAll(' ', ''),
         'ip_source': ipSource,
         'ip_cible': '',
       }));
-      final response = await request.close().timeout(const Duration(seconds: 5));
+      final response =
+          await request.close().timeout(const Duration(seconds: 30));
       final body = await response.transform(utf8.decoder).join();
       final data = jsonDecode(body);
+
       if (response.statusCode == 403) {
-        final detail = data['detail'] ?? 'Limite de machines atteinte';
-        // Afficher une dialog d'erreur
+        final detail = data['detail'] ?? 'Accès refusé';
         if (context.mounted) {
           showDialog(
             context: context,
@@ -396,14 +420,18 @@ class _ConnectionPageState extends State<ConnectionPage>
             ),
           );
         }
-        return;
+        return false;
       }
+
       if (data['connexion_id'] != null) {
         await prefs.setString('ama_connexion_id', data['connexion_id']);
-        await prefs.setInt('ama_connexion_debut', DateTime.now().millisecondsSinceEpoch);
+        await prefs.setInt(
+            'ama_connexion_debut', DateTime.now().millisecondsSinceEpoch);
       }
+      return true;
     } catch (e) {
       debugPrint('Log connexion error: $e');
+      return true; // En cas d'erreur réseau, on laisse passer
     } finally {
       _connexionEnCours = false;
     }
@@ -421,7 +449,8 @@ class _ConnectionPageState extends State<ConnectionPage>
           : 0;
       final httpClient = HttpClient();
       httpClient.badCertificateCallback = (cert, host, port) => true;
-      final uri = Uri.parse('https://connect.ama-computer.com/api/connexion/fin');
+      final uri =
+          Uri.parse('https://connect.ama-computer.com/api/connexion/fin');
       final request = await httpClient.postUrl(uri);
       request.headers.set('Content-Type', 'application/json');
       request.headers.set('Authorization', 'Bearer $token');
